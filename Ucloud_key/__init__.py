@@ -1,5 +1,6 @@
 # encoding=utf-8
 import logging
+import hashlib
 from requests import Session
 import json
 
@@ -14,29 +15,29 @@ class UcAPIException(Exception):
 
 
 class Ucloud(object):
-    def __init__(self, user, password, timeout=None):
-        self.user = user
-        self.password = password
+    def __init__(self, public_key, private_key, timeout=None):
+        self.public_key = public_key
+        self.private_key = private_key
         self.timeout = timeout
         self._session = Session()
-        self._session.headers.update({
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
-        })
+        # self._session.headers.update({"Content-Type": "application/json"})
         self.base_url = API_URL
-        self.auth = ''
 
-    def login(self):
-        data = {
-            'Action': 'LoginByPassword',
-            'UserEmail': self.user,
-            'Password': self.password,
-        }
-        self.auth, value = self._post(data=data)
-        if not self.auth:
-            logger.info("username: %s login fail", self.user)
-            raise UcAPIException(value)
-        logger.info("username: %s login successfully ", self.user)
+    def _verfy_ac(self, params):
+        items = params.items()
+        items.sort()
+
+        params_data = ""
+        for key, value in items:
+            params_data = params_data + str(key) + str(value)
+
+        params_data = params_data + self.private_key
+
+        '''use sha1 to encode keys'''
+        hash_new = hashlib.sha1()
+        hash_new.update(params_data)
+        hash_value = hash_new.hexdigest()
+        return hash_value
 
     def _parse_data(self, text):
         value = json.loads(text)
@@ -47,11 +48,15 @@ class Ucloud(object):
             return {}
 
     def _post(self, data=None, **kwargs):
+        if data is None:
+            data = {}
+        data['PublicKey'] = self.public_key
+        data['Signature'] = self._verfy_ac(data)
+
         r = self._session.post(self.base_url, data=data, **kwargs)
         r.raise_for_status()
         # if not r.ok:
         #    return False, r.reason
-
         value = self._parse_data(r.text)
         if value.get('RetCode') != 0:
             return False, value.get('Message', 'unkonwn error')
@@ -59,9 +64,6 @@ class Ucloud(object):
             return True, value
 
     def _do_request(self, action, params=None):
-        if not self.auth:
-            logger.info("username: %s login fail", self.user)
-            raise UcAPIException('auth fail')
         post_data = params or {}
         post_data['Action'] = action
         logger.debug("post: %s", json.dumps(post_data))
@@ -84,5 +86,3 @@ class Ucloud(object):
             return self._do_request(action, kwargs)
 
         return fn
-
-

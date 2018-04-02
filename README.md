@@ -6,11 +6,19 @@
 
 
 #### 初始化实例
+# 用户密码认证
 ```python
+    from Ucloud import Ucloud
     uc = Ucloud(<EMAIL>, <PASSWORD>)
 	# d登录
     uc.login()
 ```
+# key方式认证
+    from Ucloud_key import Ucloud
+    uc = Ucloud(<PUBLIC_KEY>, <PRIVATE_KEY>)
+	# d登录
+    uc.login()
+
 
 #### 直接传参数
 参数参考ucloud api 官方文档

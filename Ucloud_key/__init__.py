@@ -7,7 +7,7 @@ import json
 API_URL = 'https://api.ucloud.cn/'
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler)
+logger.addHandler(logging.NullHandler())
 
 
 class UcAPIException(Exception):
